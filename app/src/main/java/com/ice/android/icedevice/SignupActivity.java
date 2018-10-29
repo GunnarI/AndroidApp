@@ -13,12 +13,19 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.auth.AuthResult;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.firestore.DocumentReference;
+import com.google.firebase.firestore.FirebaseFirestore;
+
+import java.util.HashMap;
+import java.util.Map;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -35,6 +42,7 @@ public class SignupActivity extends AppCompatActivity {
 
     private FirebaseAuth mAuth;
     private DatabaseReference dbRef;
+    private FirebaseFirestore db;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
@@ -45,6 +53,7 @@ public class SignupActivity extends AppCompatActivity {
 
         mAuth = FirebaseAuth.getInstance();
         dbRef = FirebaseDatabase.getInstance().getReference();
+        db = FirebaseFirestore.getInstance();
 
         signupButton.setOnClickListener((View v) -> {
             signup(nameText.getText().toString(),
@@ -161,7 +170,22 @@ public class SignupActivity extends AppCompatActivity {
                             if (user != null) {
                                 UserData userData = new UserData(
                                         username, user.getEmail());
-                                dbRef.child("users").child(user.getUid()).setValue(userData);
+
+                                db.collection("users")
+                                        .document(user.getUid())
+                                        .set(userData)
+                                        .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                            @Override
+                                            public void onSuccess(Void v) {
+                                                Log.d(TAG, "DocumentSnapshot added with UserID: " + user.getUid());
+                                            }
+                                        })
+                                        .addOnFailureListener(new OnFailureListener() {
+                                            @Override
+                                            public void onFailure(@NonNull Exception e) {
+                                                Log.w(TAG, "Error adding document", e);
+                                            }
+                                        });
                             }
 
                             onSignupSuccess();
