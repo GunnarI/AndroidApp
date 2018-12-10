@@ -1,6 +1,7 @@
 package com.ice.android.icedevice;
 
 import android.Manifest;
+import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothGattCharacteristic;
@@ -43,6 +44,11 @@ import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 
 public class MainActivity extends AppCompatActivity
         implements NavigationFragment.OnConnectionRequestListener {
@@ -72,6 +78,8 @@ public class MainActivity extends AppCompatActivity
     private Handler mHandler;
     // Stops scanning after 10 seconds.
     private static final long SCAN_PERIOD = 10000;
+
+    private String WEB_SERVICE_URL = "https://processdata-dot-icedevice-7a28a.appspot.com/processdata";
 
     public UserData mUserData;
 
@@ -298,9 +306,41 @@ public class MainActivity extends AppCompatActivity
                 String dataValue = intent.getStringExtra(BleService.EXTRA_DATA);
                 mNavFragment.displayData(dataValue);
                 // TODO: Do what needs to be done for incoming data
+                final PendingResult result = goAsync();
+                Thread thread = new Thread() {
+                    public void run() {
+                        int i;
+                        // TODO: Do the data processing and http requests
+                        i = doHttpRequest(dataValue);
+                        result.setResultCode(i);
+                        result.finish();
+                    }
+                };
+                thread.start();
             }
         }
     };
+
+    private int doHttpRequest(String dataValue) {
+        final MediaType JSON = MediaType.get("application/json; charset=utf-8");
+        OkHttpClient client = new OkHttpClient();
+
+        String json = "{'18-12-10_11:37:45':'" + dataValue + "'}";
+        RequestBody body = RequestBody.create(JSON, json);
+
+        Request request = new Request.Builder()
+                .url(WEB_SERVICE_URL)
+                .post(body)
+                .build();
+
+        try (Response response = client.newCall(request).execute()) {
+            Log.i(TAG, response.toString());
+            return Activity.RESULT_OK;
+        } catch (Exception e) {
+            Log.e(TAG, "Post to db failed: " + e.toString());
+            return Activity.RESULT_CANCELED;
+        }
+    }
 
     // ----------------------------------------------------------------------------------------------------------------
     // Iterate through the supported GATT Services/Characteristics to see if the MLDP srevice is supported
