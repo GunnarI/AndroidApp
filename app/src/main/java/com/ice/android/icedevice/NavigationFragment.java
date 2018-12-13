@@ -5,6 +5,7 @@ import android.bluetooth.BluetoothGattCharacteristic;
 import android.bluetooth.BluetoothGattService;
 import android.content.Context;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
@@ -14,10 +15,14 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ExpandableListView;
+import android.widget.ImageView;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.SimpleExpandableListAdapter;
 import android.widget.TextView;
+
+import com.bumptech.glide.Glide;
+import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -32,6 +37,7 @@ public class NavigationFragment extends Fragment
     OnConnectionRequestListener mCallback;
     Button connectDeviceButton;
     TextView displayDataText;
+    ImageView measuredCircle;
     ListView listViewLE;
     List<BluetoothDevice> listBluetoothDevice;
     ListAdapter adapterLeScanResult;
@@ -55,6 +61,7 @@ public class NavigationFragment extends Fragment
         //ButterKnife.bind(mView);
         connectDeviceButton = mView.findViewById(R.id.connect_device_button);
         displayDataText = mView.findViewById(R.id.display_data);
+        measuredCircle = mView.findViewById(R.id.measured_circle);
         //listViewLE = mView.findViewById(R.id.lelist);
         //listBluetoothDevice = new ArrayList<>();
         //adapterLeScanResult = new ArrayAdapter<BluetoothDevice>(
@@ -68,7 +75,8 @@ public class NavigationFragment extends Fragment
             if (deviceConnected) {
                 mCallback.onBleDisconnectRequest();
             } else {
-                mCallback.onBleConnectionRequest();
+                //mCallback.onBleConnectionRequest();
+                mCallback.getImage("181107144755");
             }
         });
 
@@ -123,6 +131,10 @@ public class NavigationFragment extends Fragment
 
     }
 
+    public void changeImageDisplayed(Uri imageToDownload) {
+        Picasso.with(getActivity()).load(imageToDownload).placeholder(R.mipmap.measured_circle).fit().centerCrop().into(measuredCircle);
+    }
+
     private static HashMap<String, String> attributes = new HashMap();
 
     public static String lookup(String uuid, String defaultName) {
@@ -133,5 +145,6 @@ public class NavigationFragment extends Fragment
     public interface OnConnectionRequestListener {
         void onBleConnectionRequest();
         void onBleDisconnectRequest();
+        void getImage(String imageTimeStamp);
     }
 }

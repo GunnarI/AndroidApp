@@ -18,6 +18,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -30,6 +31,8 @@ import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnFailureListener;
+import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DataSnapshot;
@@ -37,6 +40,8 @@ import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -58,6 +63,10 @@ public class MainActivity extends AppCompatActivity
 
     private FirebaseAuth mAuth;
     private DatabaseReference dbRef;
+    private FirebaseUser currentUser;
+
+    private FirebaseStorage storage;
+    private StorageReference storageRef;
 
     private BluetoothAdapter mBluetoothAdapter;
     private BluetoothLeScanner mBleScanner;
@@ -98,7 +107,8 @@ public class MainActivity extends AppCompatActivity
         mAuth = FirebaseAuth.getInstance();
         dbRef = FirebaseDatabase.getInstance().getReference();
 
-        FirebaseUser currentUser = mAuth.getCurrentUser();
+        currentUser = mAuth.getCurrentUser();
+        storage = FirebaseStorage.getInstance();
         initiateUi(currentUser);
     }
 
@@ -159,6 +169,8 @@ public class MainActivity extends AppCompatActivity
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == USER_INFO_REQUEST) {
             Log.i(TAG, "Just logged in");
+            currentUser = mAuth.getCurrentUser();
+            storageRef = storage.getReference().child(currentUser.getUid());
         } else if (requestCode == REQUEST_ENABLE_BT) {
             Log.i(TAG, "Bluetooth turned on");
             getBleAdapterAndScanner();
@@ -376,12 +388,31 @@ public class MainActivity extends AppCompatActivity
         return intentFilter;
     }
 
+
+    @Override
+    public void getImage(String imageTimeStamp) {
+        storageRef.child(imageTimeStamp + ".png")
+                .getDownloadUrl().addOnSuccessListener(new OnSuccessListener<Uri>() {
+            @Override
+            public void onSuccess(Uri uri) {
+                // Got the download URL for 'photos/profile.png'
+                mNavFragment.changeImageDisplayed(uri);
+            }
+        }).addOnFailureListener(new OnFailureListener() {
+            @Override
+            public void onFailure(@NonNull Exception exception) {
+                // Handle any errors
+                Toast.makeText(MainActivity.this, "image not dowloaded", Toast.LENGTH_SHORT).show();
+            }
+        });
+    }
+
     public void initiateUi(final FirebaseUser currentUser) {
         if (currentUser == null) {
             Intent intent = new Intent(this, LoginActivity.class);
             startActivityForResult(intent, USER_INFO_REQUEST);
         } else {
-
+            storageRef = storage.getReference().child(currentUser.getUid());
             dbRef.child("users").child(currentUser.getUid())
                     .addListenerForSingleValueEvent(new ValueEventListener() {
                         @Override
